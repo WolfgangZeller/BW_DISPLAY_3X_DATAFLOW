@@ -21,8 +21,11 @@ DATA lv_no TYPE i VALUE 1.
 DATA gr_alv TYPE REF TO cl_salv_table.
 
 
-
 SELECTION-SCREEN BEGIN OF BLOCK block1 WITH FRAME TITLE tblock1.
+SELECTION-SCREEN BEGIN OF LINE.
+SELECTION-SCREEN COMMENT 1(8) tpar88 FOR FIELD par88.
+PARAMETERS par88 RADIOBUTTON GROUP rgb1 DEFAULT 'X'.
+SELECTION-SCREEN END OF LINE.
 SELECTION-SCREEN BEGIN OF LINE.
 SELECTION-SCREEN COMMENT 1(31) tpar1 FOR FIELD par1.
 PARAMETERS par1 TYPE rsoltpsourcefie-oltpsource.
@@ -37,11 +40,12 @@ SELECTION-SCREEN BEGIN OF LINE.
 SELECTION-SCREEN COMMENT 1(31) tpar3 FOR FIELD par3.
 PARAMETERS par3 TYPE rsdcubeiobj-infocube.
 SELECTION-SCREEN END OF LINE.
-SELECTION-SCREEN END OF BLOCK block1.
 SELECTION-SCREEN SKIP 1.
 
-
-SELECTION-SCREEN BEGIN OF BLOCK block2 WITH FRAME TITLE tblock2.
+SELECTION-SCREEN BEGIN OF LINE.
+SELECTION-SCREEN COMMENT 1(8) tpar99 FOR FIELD par99.
+PARAMETERS par99 RADIOBUTTON GROUP rgb1.
+SELECTION-SCREEN END OF LINE.
 SELECTION-SCREEN BEGIN OF LINE.
 SELECTION-SCREEN COMMENT 1(31) tpar4 FOR FIELD par4.
 PARAMETERS par4 TYPE rsdodsoiobj-odsobject.
@@ -51,34 +55,36 @@ SELECTION-SCREEN BEGIN OF LINE.
 SELECTION-SCREEN COMMENT 1(31) tpar5 FOR FIELD par5.
 PARAMETERS par5 TYPE rsdcubeiobj-infocube.
 SELECTION-SCREEN END OF LINE.
-SELECTION-SCREEN END OF BLOCK block2.
+SELECTION-SCREEN END OF BLOCK block1.
 
 INITIALIZATION.
-  tblock1 = 'DataSource -> InfoSource -> InfoProvider'.
-  tblock2 = 'InfoProvider -> InfoProvider'.
+  tblock1 = ''.
   tpar1 = 'Quelle (DataSource)'.
   tpar2 = 'InfoSource'.
   tpar3 = 'Ziel (InfoProvider)'.
   tpar4 = 'Quelle (InfoProvider)'.
   tpar5 = 'Ziel (InfoProvider)'.
+  tpar88 = 'Option 1'.
+  tpar99 = 'Option 2'.
 
 AT SELECTION-SCREEN.
 
   DATA lv_target_type TYPE string.
 
+  CASE abap_true.
+    WHEN par88. "verarbeite DataSource->InfoSource->InfoProvider
+      DATA(lt_output2) = zcl_3x_dataflow=>display_source_target_map_3x( i_infosource = par2
+                                                                 i_target_provider = CONV #( par3 )
+                                                                 i_datasource = par1
+                                                                 i_execution_mode = '0' ). "DataSource->InfoSource->InfoProvider
+    WHEN par99.
+      DATA(lt_output) = zcl_3x_dataflow=>display_source_target_map_3x(
+                                      i_source_provider = CONV #( par4 )
+                                      i_target_provider = CONV #( par5 )
+                                      i_execution_mode = '1' ). "Provider-Provider
+      MOVE-CORRESPONDING lt_output TO lt_output_compressed.
+  ENDCASE.
 
-  IF par2 IS INITIAL. "wenn keine InfoSource angegeben wurde
-    DATA(lt_output) = zcl_3x_dataflow=>display_source_target_map_3x(
-                                          i_source_provider = CONV #( par4 )
-                                          i_target_provider = CONV #( par5 )
-                                          i_execution_mode = '1' ). "Provider-Provider
-    MOVE-CORRESPONDING lt_output TO lt_output_compressed.
-  ELSE.
-    DATA(lt_output2) = zcl_3x_dataflow=>display_source_target_map_3x( i_infosource = par2
-                                                               i_target_provider = CONV #( par3 )
-                                                               i_datasource = par1
-                                                               i_execution_mode = '0' ). "DataSource->InfoSource->InfoProvider
-  ENDIF.
 
   IF lt_output IS INITIAL.
     cl_salv_table=>factory( IMPORTING r_salv_table = gr_alv
