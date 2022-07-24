@@ -3,7 +3,7 @@
 *&---------------------------------------------------------------------*
 *&
 *&---------------------------------------------------------------------*
-REPORT zprog_3x_dataflow_test.
+REPORT zprog_3x_dataflow.
 
 TABLES: rsdcubeiobj, rsisfield, rsoltpsourcefie, rsdodsoiobj, rsdbchatr.
 
@@ -32,8 +32,8 @@ DATA gr_alv TYPE REF TO cl_salv_table.
 
 SELECTION-SCREEN BEGIN OF BLOCK block1 WITH FRAME TITLE tblock1.
 SELECTION-SCREEN BEGIN OF LINE.
-SELECTION-SCREEN COMMENT 1(8) tpar11 FOR FIELD par11.
 PARAMETERS par11 RADIOBUTTON GROUP rgb1 DEFAULT 'X'.
+SELECTION-SCREEN COMMENT 20(50) tpar11 FOR FIELD par11.
 SELECTION-SCREEN END OF LINE.
 SELECTION-SCREEN BEGIN OF LINE.
 SELECTION-SCREEN COMMENT 1(31) tpar1 FOR FIELD par1.
@@ -52,8 +52,8 @@ SELECTION-SCREEN END OF LINE.
 SELECTION-SCREEN SKIP 1.
 
 SELECTION-SCREEN BEGIN OF LINE.
-SELECTION-SCREEN COMMENT 1(8) tpar22 FOR FIELD par22.
 PARAMETERS par22 RADIOBUTTON GROUP rgb1.
+SELECTION-SCREEN COMMENT 20(50) tpar22 FOR FIELD par22.
 SELECTION-SCREEN END OF LINE.
 SELECTION-SCREEN BEGIN OF LINE.
 SELECTION-SCREEN COMMENT 1(31) tpar4 FOR FIELD par4.
@@ -67,8 +67,8 @@ SELECTION-SCREEN END OF LINE.
 SELECTION-SCREEN SKIP 1.
 
 SELECTION-SCREEN BEGIN OF LINE.
-SELECTION-SCREEN COMMENT 1(8) tpar33 FOR FIELD par33.
 PARAMETERS par33 RADIOBUTTON GROUP rgb1.
+SELECTION-SCREEN COMMENT 20(50) tpar33 FOR FIELD par33.
 SELECTION-SCREEN END OF LINE.
 SELECTION-SCREEN BEGIN OF LINE.
 SELECTION-SCREEN COMMENT 1(31) tpar6 FOR FIELD par6.
@@ -90,9 +90,9 @@ INITIALIZATION.
   tpar5 = 'Ziel (InfoProvider)'.
   tpar6 = 'Quelle (DataSource)'.
   tpar7 = 'Ziel (InfoObject)'.
-  tpar11 = 'Option 1'.
-  tpar22 = 'Option 2'.
-  tpar33 = 'Option 3'.
+  tpar11 = 'DataSource -> InfoSource -> Provider'.
+  tpar22 = 'Provider -> Provider'.
+  tpar33 = 'DataSource -> InfoObject (Stammdaten-Attribute)'.
 
 AT SELECTION-SCREEN.
 
