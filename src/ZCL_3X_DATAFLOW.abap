@@ -26,9 +26,9 @@ public section.
     BEGIN OF _ty_src_tgt_map_3x,
         no                     TYPE i,
         src_field              TYPE rstsfield-fieldnm,
-        ueb_feldregel(20)      TYPE c,
+        transfer_rule(20)      TYPE c,
         is_field               TYPE rsisfield-iobjnm,
-        transfer_feldregel(20) TYPE c,
+        update_rule(20) TYPE c,
         aggregation(13)        TYPE c,
         tgt_field              TYPE rsupdkey-iciobjnm,
         tgt_iobjtp             TYPE rsiobjtp,
@@ -61,6 +61,11 @@ public section.
       !I_CUBE type RSINFOCUBE
     returning
       value(R_TABLE) type TT_IOBJ_DETAILS .
+  class-methods GET_ALL_FIELDS_IOBJ
+    importing
+      !I_IOBJ type RSINFOCUBE
+    returning
+      value(R_TABLE) type TT_IOBJ_DETAILS .
 protected section.
 private section.
 
@@ -69,6 +74,13 @@ private section.
       !I_T_TARGET_FIELDS type TT_SRC_TGT_MAP_3X
       !I_DATASOURCE type ROOSOURCER
       !I_INFOSOURCE type RSISFIELD-ISOURCE
+      !I_TARGET_PROVIDER type SOBJ_NAME
+    returning
+      value(R_TABLE) type TT_SRC_TGT_MAP_3X .
+  class-methods MAP_DATASOURCE_IOBJ_3X
+    importing
+      !I_T_TARGET_FIELDS type TT_SRC_TGT_MAP_3X
+      !I_DATASOURCE type ROOSOURCER
       !I_TARGET_PROVIDER type SOBJ_NAME
     returning
       value(R_TABLE) type TT_SRC_TGT_MAP_3X .
@@ -160,6 +172,8 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
       lt_target_fields = zcl_3x_dataflow=>get_all_fields_cube( CONV #( i_target_provider ) ).
     ELSEIF lv_target_type = 'ODSO'.
       lt_target_fields = zcl_3x_dataflow=>get_all_fields_odso( CONV #( i_target_provider ) ).
+    ELSEIF lv_target_type = 'IOBJ'.
+      lt_target_fields = zcl_3x_dataflow=>get_all_fields_iobj( CONV #( i_target_provider ) ).
     ENDIF.
 
     LOOP AT lt_target_fields ASSIGNING FIELD-SYMBOL(<fs_target_fields>).
@@ -173,10 +187,14 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
                                                           i_datasource = i_datasource
                                                           i_infosource = i_infosource
                                                           i_target_provider = i_target_provider ).
-    ELSE. "1 = InfoProvider auf InfoProvider
+    ELSEIF i_execution_mode = '1'. "InfoProvider auf InfoProvider
       r_table = zcl_3x_dataflow=>map_provider_provider_3x( i_t_target_fields = lt_src_tgt_map_3x
                                                         i_source_provider = i_source_provider
                                                         i_target_provider = i_target_provider ).
+    ELSEIF i_execution_mode = '2'. "DataSource auf InfoObject (Stammdaten Attribute)
+      r_table = zcl_3x_dataflow=>map_datasource_iobj_3x( i_t_target_fields = lt_src_tgt_map_3x
+                                                  i_datasource = i_datasource
+                                                  i_target_provider = i_target_provider ).
     ENDIF.
 
   ENDMETHOD.
@@ -226,6 +244,48 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
 
 
 * <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZCL_3X_DATAFLOW=>GET_ALL_FIELDS_IOBJ
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] I_IOBJ                         TYPE        RSINFOCUBE
+* | [<-()] R_TABLE                        TYPE        TT_IOBJ_DETAILS
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD GET_ALL_FIELDS_IOBJ.
+
+    DATA LT_IOBJ TYPE STANDARD TABLE OF _TY_IOBJ_DETAILS WITH EMPTY KEY.
+    DATA O_IOBJ_DETAILS TYPE REF TO CL_RSD_IOBJ.
+    DATA LS_IOBJ_DETAILS TYPE RSD_S_VIOBJ.
+    DATA LV_NO TYPE I VALUE 1.
+
+    SELECT ATTRINM as IOBJNM
+     FROM RSDBCHATR
+     WHERE CHABASNM = @I_IOBJ
+     AND OBJVERS = 'A'
+     INTO CORRESPONDING FIELDS OF TABLE @LT_IOBJ.
+
+    LOOP AT LT_IOBJ ASSIGNING FIELD-SYMBOL(<FS_IOBJ>).
+      O_IOBJ_DETAILS = CL_RSD_IOBJ=>FACTORY( <FS_IOBJ>-IOBJNM ).
+      O_IOBJ_DETAILS->GET_INFO( EXPORTING I_OBJVERS = 'A' IMPORTING E_S_VIOBJ = LS_IOBJ_DETAILS ).
+      <FS_IOBJ>-NO = LV_NO.
+      <FS_IOBJ>-FIELDNM = LS_IOBJ_DETAILS-FIELDNM.
+      <FS_IOBJ>-IOBJTP = LS_IOBJ_DETAILS-IOBJTP.
+      <FS_IOBJ>-TXTSH = LS_IOBJ_DETAILS-TXTSH.
+      <FS_IOBJ>-TXTLG = LS_IOBJ_DETAILS-TXTLG.
+      <FS_IOBJ>-DATATP = LS_IOBJ_DETAILS-DATATP.
+      <FS_IOBJ>-LENGTH = LS_IOBJ_DETAILS-OUTPUTLEN.
+      <FS_IOBJ>-DECIMALS = LS_IOBJ_DETAILS-KYFDECIM.
+      <FS_IOBJ>-MD_ATTR = LS_IOBJ_DETAILS-ATTRIBFL.
+      <FS_IOBJ>-MD_TEXT  = SWITCH #( LS_IOBJ_DETAILS-TXTTABFL WHEN '1' THEN 'X'
+                                                                 WHEN '0' THEN '' ).
+      <FS_IOBJ>-MD_HIER = LS_IOBJ_DETAILS-HIETABFL.
+      LV_NO = LV_NO + 1.
+    ENDLOOP.
+
+    R_TABLE = LT_IOBJ.
+
+  ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
 * | Static Public Method ZCL_3X_DATAFLOW=>GET_ALL_FIELDS_ODSO
 * +-------------------------------------------------------------------------------------------------+
 * | [--->] I_ODSO                         TYPE        RSDODSOBJECT
@@ -268,6 +328,85 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
 
 
 * <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Private Method ZCL_3X_DATAFLOW=>MAP_DATASOURCE_IOBJ_3X
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] I_T_TARGET_FIELDS              TYPE        TT_SRC_TGT_MAP_3X
+* | [--->] I_DATASOURCE                   TYPE        ROOSOURCER
+* | [--->] I_TARGET_PROVIDER              TYPE        SOBJ_NAME
+* | [<-()] R_TABLE                        TYPE        TT_SRC_TGT_MAP_3X
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD MAP_DATASOURCE_IOBJ_3X.
+
+    "-- Ergebnis der Methode:
+    "-- Gib das Mapping zwischen DataSource und InfoObject (Stammdaten-Attribute) zurück.
+
+
+    TYPES: BEGIN OF _ty_ueb,
+             feldregel(13) TYPE c,
+             src_field     TYPE rsiobjnm_ks,
+             is_field      TYPE rsiobjnm_ks,
+           END OF _ty_ueb.
+    DATA lt_ueb TYPE STANDARD TABLE OF _ty_ueb WITH EMPTY KEY.
+    DATA lt_target_fields TYPE STANDARD TABLE OF _ty_iobj_details WITH EMPTY KEY.
+    DATA lt_src_tgt_map_3x TYPE STANDARD TABLE OF _ty_src_tgt_map_3x.
+    DATA lv_no TYPE i VALUE 1.
+    DATA lv_where_string TYPE string.
+
+    lt_src_tgt_map_3x = i_t_target_fields.
+
+
+    "-- Selektiere eindeutige Übertragungsregel ID (transfer rule)
+    SELECT DISTINCT transtru
+      FROM rsisosmap
+      WHERE objvers = 'A'
+      AND oltpsource = @i_datasource
+      AND isource = @i_target_provider
+      INTO @DATA(lv_transtru).
+
+
+      "-- Mapping der "unteren Trfn" | Quelle zu IOBJ
+      SELECT iobjnm AS is_field,
+        CASE WHEN fixed_value <> ' ' THEN 'Konstante'
+             WHEN convrout_g <> ' ' THEN 'Routine'
+             WHEN convrout_l <> ' ' THEN 'Routine'
+             WHEN formula_id <> ' ' THEN 'Formel'
+             END AS feldregel
+        FROM rstsrules
+        WHERE objvers = 'A'
+        AND transtru = @lv_transtru
+        INTO CORRESPONDING FIELDS OF TABLE @lt_ueb.
+
+      SELECT iobjnm, fieldnm
+        FROM rstsfield
+        WHERE objvers = 'A'
+        AND transtru = @lv_transtru
+        INTO TABLE @DATA(lt_ueb_fields).
+    ENDSELECT.
+
+    LOOP AT lt_ueb ASSIGNING FIELD-SYMBOL(<fs_ueb>).
+      <fs_ueb>-src_field = VALUE #( lt_ueb_fields[ iobjnm = <fs_ueb>-is_field ]-fieldnm OPTIONAL ).
+    ENDLOOP.
+
+    LOOP AT lt_ueb ASSIGNING <fs_ueb> WHERE feldregel IS NOT INITIAL.
+      <fs_ueb>-src_field = ''.
+    ENDLOOP.
+    UNASSIGN <fs_ueb>.
+    LOOP AT lt_ueb ASSIGNING <fs_ueb> WHERE feldregel IS INITIAL AND ( src_field IS NOT INITIAL AND is_field IS NOT INITIAL ).
+      <fs_ueb>-feldregel = '1:1'.
+    ENDLOOP.
+
+
+    LOOP AT lt_src_tgt_map_3x ASSIGNING FIELD-SYMBOL(<fs_src_tgt>).
+      <fs_src_tgt>-transfer_rule = VALUE #( lt_ueb[ is_field = <fs_src_tgt>-tgt_field ]-feldregel OPTIONAL ).
+      <fs_src_tgt>-src_field = VALUE #( lt_ueb[ is_field = <fs_src_tgt>-tgt_field ]-src_field OPTIONAL ).
+    ENDLOOP.
+
+    r_table = lt_src_tgt_map_3x.
+
+  ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
 * | Static Private Method ZCL_3X_DATAFLOW=>MAP_DATASOURCE_PROVIDER_3X
 * +-------------------------------------------------------------------------------------------------+
 * | [--->] I_T_TARGET_FIELDS              TYPE        TT_SRC_TGT_MAP_3X
@@ -280,7 +419,7 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
 
     "-- Ergebnis der Methode:
     "-- Gib das Mapping zwischen DataSource und InfoProvider zurück.
-    "-- DataSource -> Übertragungsregeln (transfer rules) -> InfoSource (Kommunikationsstruktur -> Fortschreibungsregeln (update rules) -> InfoProvider
+    "-- DataSource -> Übertragungsregeln (transfer rules) -> InfoSource -> Fortschreibungsregeln (update rules) -> InfoProvider
 
 
     TYPES: BEGIN OF _ty_transfer_rule,
@@ -392,13 +531,13 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
 
     LOOP AT lt_src_tgt_map_3x ASSIGNING FIELD-SYMBOL(<fs_src_tgt>).
       <fs_src_tgt>-aggregation = VALUE #( lt_transferregeln[ tgt_field = <fs_src_tgt>-tgt_field ]-aggregation OPTIONAL ).
-      <fs_src_tgt>-transfer_feldregel = VALUE #( lt_transferregeln[ tgt_field = <fs_src_tgt>-tgt_field ]-feldregel OPTIONAL ).
+      <fs_src_tgt>-update_rule = VALUE #( lt_transferregeln[ tgt_field = <fs_src_tgt>-tgt_field ]-feldregel OPTIONAL ).
       <fs_src_tgt>-is_field = VALUE #( lt_transferregeln[ tgt_field = <fs_src_tgt>-tgt_field ]-is_field OPTIONAL ).
-      <fs_src_tgt>-ueb_feldregel = VALUE #( lt_ueb[ is_field = <fs_src_tgt>-is_field ]-feldregel OPTIONAL ).
+      <fs_src_tgt>-transfer_rule = VALUE #( lt_ueb[ is_field = <fs_src_tgt>-is_field ]-feldregel OPTIONAL ).
       <fs_src_tgt>-src_field = VALUE #( lt_ueb[ is_field = <fs_src_tgt>-is_field ]-src_field OPTIONAL ).
     ENDLOOP.
 
-    LOOP AT lt_src_tgt_map_3x ASSIGNING <fs_src_tgt> WHERE ( transfer_feldregel = ' ' OR transfer_feldregel = '' OR transfer_feldregel = 'Routine' ).
+    LOOP AT lt_src_tgt_map_3x ASSIGNING <fs_src_tgt> WHERE ( update_rule = ' ' OR update_rule = '' OR update_rule = 'Routine' ).
       <fs_src_tgt>-src_field = ''.
     ENDLOOP.
 
@@ -488,11 +627,11 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
 
     LOOP AT lt_src_tgt_map_3x ASSIGNING FIELD-SYMBOL(<fs_src_tgt>).
       <fs_src_tgt>-aggregation = VALUE #( lt_transferregeln[ tgt_field = <fs_src_tgt>-tgt_field ]-aggregation OPTIONAL ).
-      <fs_src_tgt>-transfer_feldregel = VALUE #( lt_transferregeln[ tgt_field = <fs_src_tgt>-tgt_field ]-feldregel OPTIONAL ).
+      <fs_src_tgt>-update_rule = VALUE #( lt_transferregeln[ tgt_field = <fs_src_tgt>-tgt_field ]-feldregel OPTIONAL ).
       <fs_src_tgt>-src_field = VALUE #( lt_transferregeln[ tgt_field = <fs_src_tgt>-tgt_field ]-src_field OPTIONAL ).
     ENDLOOP.
 
-    LOOP AT lt_src_tgt_map_3x ASSIGNING <fs_src_tgt> WHERE ( transfer_feldregel = ' ' OR transfer_feldregel = '' OR transfer_feldregel = 'Routine' ).
+    LOOP AT lt_src_tgt_map_3x ASSIGNING <fs_src_tgt> WHERE ( update_rule = ' ' OR update_rule = '' OR update_rule = 'Routine' ).
       <fs_src_tgt>-src_field = ''.
     ENDLOOP.
 
