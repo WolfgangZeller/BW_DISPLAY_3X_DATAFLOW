@@ -1,12 +1,12 @@
-class ZCL_3X_DATAFLOW definition
-  public
-  final
-  create public .
+CLASS zcl_3x_dataflow DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
 
-public section.
+  PUBLIC SECTION.
 
-  types:
-    BEGIN OF _ty_iobj_details,
+    TYPES:
+      BEGIN OF _ty_iobj_details,
         no       TYPE i,
         iobjnm   TYPE rsiobjnm,
         fieldnm  TYPE rsdiobjfieldnm,
@@ -20,52 +20,53 @@ public section.
         md_text  TYPE rsdtxttabfl, "Texte zum IOBJ
         md_hier  TYPE rshietabfl, "Hierarchien zum IOBJ
       END OF _ty_iobj_details .
-  types:
-    tt_iobj_details TYPE STANDARD TABLE OF _ty_iobj_details WITH EMPTY KEY .
-  types:
-    BEGIN OF _ty_src_tgt_map_3x,
-        no                     TYPE i,
-        src_field              TYPE rstsfield-fieldnm,
-        transfer_rule(20)      TYPE c,
-        is_field               TYPE rsisfield-iobjnm,
-        update_rule(20) TYPE c,
-        aggregation(13)        TYPE c,
-        tgt_field              TYPE rsupdkey-iciobjnm,
-        tgt_iobjtp             TYPE rsiobjtp,
-        tgt_txtlg                  TYPE rstxtlg,
+    TYPES:
+      tt_iobj_details TYPE STANDARD TABLE OF _ty_iobj_details WITH EMPTY KEY .
+    TYPES:
+      BEGIN OF _ty_src_tgt_map_3x,
+        no                TYPE i,
+        src_field         TYPE rstsfield-fieldnm,
+        trans_field       TYPE rstsfield-iobjnm,
+        transfer_rule(20) TYPE c,
+        is_field          TYPE rsisfield-iobjnm,
+        update_rule(20)   TYPE c,
+        tgt_field         TYPE rsupdkey-iciobjnm,
+        tgt_iobjtp        TYPE rsiobjtp,
+        aggregation(13)   TYPE c,
+        tgt_txtlg         TYPE rstxtlg,
       END OF _ty_src_tgt_map_3x .
-  types:
-    tt_src_tgt_map_3x TYPE STANDARD TABLE OF _ty_src_tgt_map_3x WITH EMPTY KEY .
+    TYPES:
+      tt_src_tgt_map_3x TYPE STANDARD TABLE OF _ty_src_tgt_map_3x WITH EMPTY KEY .
 
-  class-methods DISPLAY_SOURCE_TARGET_MAP_3X
-    importing
-      !I_DATASOURCE type ROOSOURCER optional
-      !I_INFOSOURCE type RSISFIELD-ISOURCE optional
-      !I_SOURCE_PROVIDER type SOBJ_NAME optional
-      !I_TARGET_PROVIDER type SOBJ_NAME optional
-      !I_EXECUTION_MODE type C
-    returning
-      value(R_TABLE) type TT_SRC_TGT_MAP_3X .
-  class-methods CHECK_OBJECT_TYPE
-    importing
-      !I_OBJECT_NAME type STRING
-    returning
-      value(R_OBJECT_TYPE) type STRING .
-  class-methods GET_ALL_FIELDS_ODSO
-    importing
-      !I_ODSO type RSDODSOBJECT
-    returning
-      value(R_TABLE) type TT_IOBJ_DETAILS .
-  class-methods GET_ALL_FIELDS_CUBE
-    importing
-      !I_CUBE type RSINFOCUBE
-    returning
-      value(R_TABLE) type TT_IOBJ_DETAILS .
-  class-methods GET_ALL_FIELDS_IOBJ
-    importing
-      !I_IOBJ type RSINFOCUBE
-    returning
-      value(R_TABLE) type TT_IOBJ_DETAILS .
+    CLASS-METHODS display_source_target_map_3x
+      IMPORTING
+        !i_datasource      TYPE roosourcer OPTIONAL
+        !i_infosource      TYPE rsisfield-isource OPTIONAL
+        !i_source_provider TYPE sobj_name OPTIONAL
+        !i_target_provider TYPE sobj_name OPTIONAL
+        !i_execution_mode  TYPE c
+      RETURNING
+        VALUE(r_table)     TYPE tt_src_tgt_map_3x .
+    CLASS-METHODS check_object_type
+      IMPORTING
+        !i_object_name       TYPE string
+      RETURNING
+        VALUE(r_object_type) TYPE string .
+    CLASS-METHODS get_all_fields_odso
+      IMPORTING
+        !i_odso        TYPE rsdodsobject
+      RETURNING
+        VALUE(r_table) TYPE tt_iobj_details .
+    CLASS-METHODS get_all_fields_cube
+      IMPORTING
+        !i_cube        TYPE rsinfocube
+      RETURNING
+        VALUE(r_table) TYPE tt_iobj_details .
+    CLASS-METHODS get_all_fields_iobj
+      IMPORTING
+        !i_iobj        TYPE rsinfocube
+      RETURNING
+        VALUE(r_table) TYPE tt_iobj_details .
 protected section.
 private section.
 
@@ -249,38 +250,40 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
 * | [--->] I_IOBJ                         TYPE        RSINFOCUBE
 * | [<-()] R_TABLE                        TYPE        TT_IOBJ_DETAILS
 * +--------------------------------------------------------------------------------------</SIGNATURE>
-  METHOD GET_ALL_FIELDS_IOBJ.
+  METHOD get_all_fields_iobj.
 
-    DATA LT_IOBJ TYPE STANDARD TABLE OF _TY_IOBJ_DETAILS WITH EMPTY KEY.
-    DATA O_IOBJ_DETAILS TYPE REF TO CL_RSD_IOBJ.
-    DATA LS_IOBJ_DETAILS TYPE RSD_S_VIOBJ.
-    DATA LV_NO TYPE I VALUE 1.
+    DATA lt_iobj TYPE STANDARD TABLE OF _ty_iobj_details WITH EMPTY KEY.
+    DATA o_iobj_details TYPE REF TO cl_rsd_iobj.
+    DATA ls_iobj_details TYPE rsd_s_viobj.
+    DATA lv_no TYPE i VALUE 1.
 
-    SELECT ATTRINM as IOBJNM
-     FROM RSDBCHATR
-     WHERE CHABASNM = @I_IOBJ
-     AND OBJVERS = 'A'
-     INTO CORRESPONDING FIELDS OF TABLE @LT_IOBJ.
+    SELECT attrinm AS iobjnm
+     FROM rsdbchatr
+     WHERE chabasnm = @i_iobj
+     AND objvers = 'A'
+     INTO CORRESPONDING FIELDS OF TABLE @lt_iobj.
 
-    LOOP AT LT_IOBJ ASSIGNING FIELD-SYMBOL(<FS_IOBJ>).
-      O_IOBJ_DETAILS = CL_RSD_IOBJ=>FACTORY( <FS_IOBJ>-IOBJNM ).
-      O_IOBJ_DETAILS->GET_INFO( EXPORTING I_OBJVERS = 'A' IMPORTING E_S_VIOBJ = LS_IOBJ_DETAILS ).
-      <FS_IOBJ>-NO = LV_NO.
-      <FS_IOBJ>-FIELDNM = LS_IOBJ_DETAILS-FIELDNM.
-      <FS_IOBJ>-IOBJTP = LS_IOBJ_DETAILS-IOBJTP.
-      <FS_IOBJ>-TXTSH = LS_IOBJ_DETAILS-TXTSH.
-      <FS_IOBJ>-TXTLG = LS_IOBJ_DETAILS-TXTLG.
-      <FS_IOBJ>-DATATP = LS_IOBJ_DETAILS-DATATP.
-      <FS_IOBJ>-LENGTH = LS_IOBJ_DETAILS-OUTPUTLEN.
-      <FS_IOBJ>-DECIMALS = LS_IOBJ_DETAILS-KYFDECIM.
-      <FS_IOBJ>-MD_ATTR = LS_IOBJ_DETAILS-ATTRIBFL.
-      <FS_IOBJ>-MD_TEXT  = SWITCH #( LS_IOBJ_DETAILS-TXTTABFL WHEN '1' THEN 'X'
+    INSERT VALUE #( iobjnm = i_iobj ) INTO TABLE lt_iobj.
+
+    LOOP AT lt_iobj ASSIGNING FIELD-SYMBOL(<fs_iobj>).
+      o_iobj_details = cl_rsd_iobj=>factory( <fs_iobj>-iobjnm ).
+      o_iobj_details->get_info( EXPORTING i_objvers = 'A' IMPORTING e_s_viobj = ls_iobj_details ).
+      <fs_iobj>-no = lv_no.
+      <fs_iobj>-fieldnm = ls_iobj_details-fieldnm.
+      <fs_iobj>-iobjtp = ls_iobj_details-iobjtp.
+      <fs_iobj>-txtsh = ls_iobj_details-txtsh.
+      <fs_iobj>-txtlg = ls_iobj_details-txtlg.
+      <fs_iobj>-datatp = ls_iobj_details-datatp.
+      <fs_iobj>-length = ls_iobj_details-outputlen.
+      <fs_iobj>-decimals = ls_iobj_details-kyfdecim.
+      <fs_iobj>-md_attr = ls_iobj_details-attribfl.
+      <fs_iobj>-md_text  = SWITCH #( ls_iobj_details-txttabfl WHEN '1' THEN 'X'
                                                                  WHEN '0' THEN '' ).
-      <FS_IOBJ>-MD_HIER = LS_IOBJ_DETAILS-HIETABFL.
-      LV_NO = LV_NO + 1.
+      <fs_iobj>-md_hier = ls_iobj_details-hietabfl.
+      lv_no = lv_no + 1.
     ENDLOOP.
 
-    R_TABLE = LT_IOBJ.
+    r_table = lt_iobj.
 
   ENDMETHOD.
 
@@ -342,8 +345,9 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
 
 
     TYPES: BEGIN OF _ty_ueb,
+             src_field     TYPE rstsfield-fieldnm,
+             trans_field   TYPE rstsfield-iobjnm,
              feldregel(13) TYPE c,
-             src_field     TYPE rsiobjnm_ks,
              is_field      TYPE rsiobjnm_ks,
            END OF _ty_ueb.
     DATA lt_ueb TYPE STANDARD TABLE OF _ty_ueb WITH EMPTY KEY.
@@ -362,38 +366,43 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
       AND oltpsource = @i_datasource
       AND isource = @i_target_provider
       INTO @DATA(lv_transtru).
+      ENDSELECT.
 
 
-      "-- Mapping der "unteren Trfn" | Quelle zu IOBJ
-      SELECT iobjnm AS is_field,
-        CASE WHEN fixed_value <> ' ' THEN 'Konstante'
-             WHEN convrout_g <> ' ' THEN 'Routine'
-             WHEN convrout_l <> ' ' THEN 'Routine'
-             WHEN formula_id <> ' ' THEN 'Formel'
-             END AS feldregel
-        FROM rstsrules
-        WHERE objvers = 'A'
-        AND transtru = @lv_transtru
-        INTO CORRESPONDING FIELDS OF TABLE @lt_ueb.
+    "-- MAPPING: untere Trfn (Felder DataSource zu Transferstruktur zu InfoSource/Kommunikationsstruktur)
+    SELECT  src2trans~fieldnm   AS src_field,
+            trans2is~iobjnm     AS is_field,
+            trans2is~iobjnm_ts  AS trans_field,
+            CASE  WHEN trans2is~fixed_value <> ' ' THEN 'Konstante'
+                  WHEN trans2is~convrout_g <> ' ' THEN 'Routine'
+                  WHEN trans2is~convrout_l <> ' ' THEN 'Routine'
+                  WHEN trans2is~formula_id <> ' ' THEN 'Formel'
+                  ELSE '1:1'
+            END                 AS feldregel
+      FROM rstsrules AS trans2is
+            LEFT OUTER JOIN rstsfield AS src2trans
+            ON trans2is~transtru = src2trans~transtru
+            AND src2trans~objvers = 'A'
+            AND trans2is~objvers = 'A'
+      WHERE trans2is~transtru = @lv_transtru
+      AND src2trans~transtru = @lv_transtru
+      AND src2trans~iobjnm = trans2is~iobjnm_ts
+UNION
+    SELECT  ' '                 AS src_field,
+            trans2is~iobjnm     AS is_field,
+            trans2is~iobjnm_ts  AS trans_field,
+            CASE  WHEN trans2is~fixed_value <> ' ' THEN 'Konstante'
+                  WHEN trans2is~convrout_g <> ' ' THEN 'Routine'
+                  WHEN trans2is~convrout_l <> ' ' THEN 'Routine'
+                  WHEN trans2is~formula_id <> ' ' THEN 'Formel'
+                  ELSE ' '
+            END                 AS feldregel
+      FROM rstsrules AS trans2is
+      WHERE trans2is~transtru = @lv_transtru
+      AND trans2is~objvers = 'A'
+      AND iobjnm_ts = ''
+      INTO CORRESPONDING FIELDS OF TABLE @lt_ueb. "Felder Transferstruktur zu Kommunikationsstruktur/InfoSource (untere Trfn)
 
-      SELECT iobjnm, fieldnm
-        FROM rstsfield
-        WHERE objvers = 'A'
-        AND transtru = @lv_transtru
-        INTO TABLE @DATA(lt_ueb_fields).
-    ENDSELECT.
-
-    LOOP AT lt_ueb ASSIGNING FIELD-SYMBOL(<fs_ueb>).
-      <fs_ueb>-src_field = VALUE #( lt_ueb_fields[ iobjnm = <fs_ueb>-is_field ]-fieldnm OPTIONAL ).
-    ENDLOOP.
-
-    LOOP AT lt_ueb ASSIGNING <fs_ueb> WHERE feldregel IS NOT INITIAL.
-      <fs_ueb>-src_field = ''.
-    ENDLOOP.
-    UNASSIGN <fs_ueb>.
-    LOOP AT lt_ueb ASSIGNING <fs_ueb> WHERE feldregel IS INITIAL AND ( src_field IS NOT INITIAL AND is_field IS NOT INITIAL ).
-      <fs_ueb>-feldregel = '1:1'.
-    ENDLOOP.
 
 
     LOOP AT lt_src_tgt_map_3x ASSIGNING FIELD-SYMBOL(<fs_src_tgt>).
@@ -415,12 +424,11 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
 * | [--->] I_TARGET_PROVIDER              TYPE        SOBJ_NAME
 * | [<-()] R_TABLE                        TYPE        TT_SRC_TGT_MAP_3X
 * +--------------------------------------------------------------------------------------</SIGNATURE>
-  METHOD MAP_DATASOURCE_PROVIDER_3X.
+  METHOD map_datasource_provider_3x.
 
     "-- Ergebnis der Methode:
     "-- Gib das Mapping zwischen DataSource und InfoProvider zurück.
     "-- DataSource -> Übertragungsregeln (transfer rules) -> InfoSource -> Fortschreibungsregeln (update rules) -> InfoProvider
-
 
     TYPES: BEGIN OF _ty_transfer_rule,
              is_field        TYPE rsiobjnm,
@@ -430,8 +438,9 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
            END OF _ty_transfer_rule.
     DATA lt_transferregeln TYPE STANDARD TABLE OF _ty_transfer_rule WITH EMPTY KEY.
     TYPES: BEGIN OF _ty_ueb,
+             src_field     TYPE rstsfield-fieldnm,
+             trans_field   TYPE rstsfield-iobjnm,
              feldregel(13) TYPE c,
-             src_field     TYPE rsiobjnm_ks,
              is_field      TYPE rsiobjnm_ks,
            END OF _ty_ueb.
     DATA lt_ueb TYPE STANDARD TABLE OF _ty_ueb WITH EMPTY KEY.
@@ -439,107 +448,130 @@ CLASS ZCL_3X_DATAFLOW IMPLEMENTATION.
     DATA lt_src_tgt_map_3x TYPE STANDARD TABLE OF _ty_src_tgt_map_3x.
     DATA lv_no TYPE i VALUE 1.
     DATA lv_where_string TYPE string.
+    DATA lv_updid TYPE rsupdid.
+    DATA lv_startroutine TYPE rsroutine.
 
     lt_src_tgt_map_3x = i_t_target_fields.
 
-    "-- Selektiere eindeutige ID für Fortschreibungsregeln (update rule)
-    SELECT DISTINCT updid
+
+
+    SELECT DISTINCT updid, startroutine
       FROM rsupdinfo
       WHERE objvers = 'A'
       AND isource = @i_infosource
       AND infocube = @i_target_provider
-      INTO @DATA(lv_updid).
+      INTO (@lv_updid, @lv_startroutine). "eindeutige ID für Fortschreibungsregeln (update rule)
     ENDSELECT.
 
-
-    "-- Selektiere eindeutige Übertragungsregel ID (transfer rule)
     SELECT DISTINCT transtru
       FROM rsisosmap
       WHERE objvers = 'A'
       AND oltpsource = @i_datasource
       AND isource = @i_infosource
-      INTO @DATA(lv_transtru).
-
-
-      "-- Mapping der "unteren Trfn" | Quelle zu InfoSource (Übertragungsregel - Kommunikationsstruktur)
-      SELECT iobjnm AS is_field,
-        CASE WHEN fixed_value <> ' ' THEN 'Konstante'
-             WHEN convrout_g <> ' ' THEN 'Routine'
-             WHEN convrout_l <> ' ' THEN 'Routine'
-             WHEN formula_id <> ' ' THEN 'Formel'
-             END AS feldregel
-        FROM rstsrules
-        WHERE objvers = 'A'
-        AND transtru = @lv_transtru
-        INTO CORRESPONDING FIELDS OF TABLE @lt_ueb.
-
-      SELECT iobjnm, fieldnm
-        FROM rstsfield
-        WHERE objvers = 'A'
-        AND transtru = @lv_transtru
-        INTO TABLE @DATA(lt_ueb_fields).
+      INTO @DATA(lv_transtru). "eindeutige Übertragungsregel ID (transfer rule)
     ENDSELECT.
 
-    LOOP AT lt_ueb ASSIGNING FIELD-SYMBOL(<fs_ueb>).
-      <fs_ueb>-src_field = VALUE #( lt_ueb_fields[ iobjnm = <fs_ueb>-is_field ]-fieldnm OPTIONAL ).
-    ENDLOOP.
-
-    LOOP AT lt_ueb ASSIGNING <fs_ueb> WHERE feldregel IS NOT INITIAL.
-      <fs_ueb>-src_field = ''.
-    ENDLOOP.
-    UNASSIGN <fs_ueb>.
-    LOOP AT lt_ueb ASSIGNING <fs_ueb> WHERE feldregel IS INITIAL AND ( src_field IS NOT INITIAL AND is_field IS NOT INITIAL ).
-      <fs_ueb>-feldregel = '1:1'.
-    ENDLOOP.
 
 
-    "-- Mapping der "oberen Trfn" | InfoSource zu Ziel-Provider
-    SELECT iciobjnm AS tgt_field, csiobjnm AS is_field, ' ' AS aggregation,
-         CASE calctpkey WHEN '0' THEN ' '
-                        WHEN '1' THEN '1:1'
-                        WHEN '2' THEN 'Formel'
-                        WHEN '3' THEN 'Routine'
-                        WHEN '4' THEN 'Konstante'
-                        WHEN '5' THEN 'Stammdaten nachlesen'
-                        ELSE 'N.V.'   END AS feldregel
+    "-- MAPPING 1: untere Trfn (Felder DataSource zu Transferstruktur zu InfoSource/Kommunikationsstruktur)
+    SELECT  src2trans~fieldnm   AS src_field,
+            trans2is~iobjnm     AS is_field,
+            trans2is~iobjnm_ts  AS trans_field,
+            CASE  WHEN trans2is~fixed_value <> ' ' THEN 'Konstante'
+                  WHEN trans2is~convrout_g <> ' ' THEN 'Routine'
+                  WHEN trans2is~convrout_l <> ' ' THEN 'Routine'
+                  WHEN trans2is~formula_id <> ' ' THEN 'Formel'
+                  ELSE '1:1'
+            END                 AS feldregel
+      FROM rstsrules AS trans2is
+            LEFT OUTER JOIN rstsfield AS src2trans
+            ON trans2is~transtru = src2trans~transtru
+            AND src2trans~objvers = 'A'
+            AND trans2is~objvers = 'A'
+      WHERE trans2is~transtru = @lv_transtru
+      AND src2trans~transtru = @lv_transtru
+      AND src2trans~iobjnm = trans2is~iobjnm_ts
+UNION
+    SELECT  ' '                 AS src_field,
+            trans2is~iobjnm     AS is_field,
+            trans2is~iobjnm_ts  AS trans_field,
+            CASE  WHEN trans2is~fixed_value <> ' ' THEN 'Konstante'
+                  WHEN trans2is~convrout_g <> ' ' THEN 'Routine'
+                  WHEN trans2is~convrout_l <> ' ' THEN 'Routine'
+                  WHEN trans2is~formula_id <> ' ' THEN 'Formel'
+                  ELSE ' '
+            END                 AS feldregel
+      FROM rstsrules AS trans2is
+      WHERE trans2is~transtru = @lv_transtru
+      AND trans2is~objvers = 'A'
+      AND iobjnm_ts = ''
+      INTO CORRESPONDING FIELDS OF TABLE @lt_ueb. "Felder Transferstruktur zu Kommunikationsstruktur/InfoSource (untere Trfn)
+
+
+
+    "-- MAPPING 2: obere Trfn (InfoSource zu Target InfoProvider)
+    SELECT  iciobjnm  AS tgt_field,
+            csiobjnm  AS is_field,
+            ' ' AS aggregation,
+            CASE calctpkey  WHEN '0' THEN ' '
+                            WHEN '1' THEN '1:1'
+                            WHEN '2' THEN 'Formel'
+                            WHEN '3' THEN 'Routine'
+                            WHEN '4' THEN 'Konstante'
+                            WHEN '5' THEN 'Stammdaten nachlesen'
+                            ELSE 'N.V.'
+             END      AS feldregel
       FROM rsupdkey
       WHERE objvers = 'A'
       AND updid = @lv_updid
+      AND csiobjnm <> ''
  UNION
-    SELECT iciobjnm AS tgt_field, csiobjnm AS is_field,
-                CASE updtype  WHEN 'MOV' THEN 'Überschreiben'
-                      WHEN 'ADD' THEN 'Summieren'
-                      ELSE 'No updating' END AS aggregation,
-        CASE calctpdat  WHEN '1' THEN '1:1'
-                        WHEN '2' THEN 'Formel'
-                        WHEN '3' THEN 'Routine'
-                        ELSE 'N.V.'   END AS feldregel
+    SELECT  iciobjnm AS tgt_field,
+            csiobjnm AS is_field,
+            CASE updtype  WHEN 'MOV' THEN 'Überschreiben'
+                          WHEN 'ADD' THEN 'Summieren'
+                          ELSE 'No updating'
+            END      AS aggregation,
+            CASE calctpdat  WHEN '1' THEN '1:1'
+                            WHEN '2' THEN 'Formel'
+                            WHEN '3' THEN 'Routine'
+                            ELSE 'N.V.'
+            END      AS feldregel
       FROM rsupddat
       WHERE objvers = 'A'
       AND updid = @lv_updid
       INTO CORRESPONDING FIELDS OF TABLE @lt_transferregeln.
 
-    "-- Entferne für Merkmale den Aggregations-Wert; behalte ihn nur für Kennzahlen
-    LOOP AT lt_transferregeln ASSIGNING FIELD-SYMBOL(<fs_trfnr>).
+
+
+    "-- VORBEREITUNG Ausgabe
+    LOOP AT lt_transferregeln ASSIGNING FIELD-SYMBOL(<fs_trfnr>). "entferne für Merkmale den Aggregations-Wert; behalte ihn nur für Kennzahlen
       IF line_exists( lt_src_tgt_map_3x[ tgt_field = <fs_trfnr>-tgt_field tgt_iobjtp = 'KYF' ] ).
-        "nur Aggregationstyp von Kennzahlen sind richtig
       ELSE.
         <fs_trfnr>-aggregation = ''.
       ENDIF.
     ENDLOOP.
 
 
+
+    "-- EINTRÄGE IN AUSGABETABELLE einfügen
     LOOP AT lt_src_tgt_map_3x ASSIGNING FIELD-SYMBOL(<fs_src_tgt>).
       <fs_src_tgt>-aggregation = VALUE #( lt_transferregeln[ tgt_field = <fs_src_tgt>-tgt_field ]-aggregation OPTIONAL ).
       <fs_src_tgt>-update_rule = VALUE #( lt_transferregeln[ tgt_field = <fs_src_tgt>-tgt_field ]-feldregel OPTIONAL ).
       <fs_src_tgt>-is_field = VALUE #( lt_transferregeln[ tgt_field = <fs_src_tgt>-tgt_field ]-is_field OPTIONAL ).
       <fs_src_tgt>-transfer_rule = VALUE #( lt_ueb[ is_field = <fs_src_tgt>-is_field ]-feldregel OPTIONAL ).
       <fs_src_tgt>-src_field = VALUE #( lt_ueb[ is_field = <fs_src_tgt>-is_field ]-src_field OPTIONAL ).
+      <fs_src_tgt>-trans_field = VALUE #( lt_ueb[ is_field = <fs_src_tgt>-is_field ]-trans_field OPTIONAL ).
     ENDLOOP.
 
     LOOP AT lt_src_tgt_map_3x ASSIGNING <fs_src_tgt> WHERE ( update_rule = ' ' OR update_rule = '' OR update_rule = 'Routine' ).
-      <fs_src_tgt>-src_field = ''.
+      <fs_src_tgt>-trans_field = ''.
     ENDLOOP.
+
+    IF lv_startroutine = '0000'. "wenn Startroutine in Fortschreibungsregeln existiert, Zeile in Ausgabe bringen
+    ELSE.
+      INSERT VALUE #( update_rule = 'STARTROUTINE' ) INTO TABLE lt_src_tgt_map_3x.
+    ENDIF.
 
     r_table = lt_src_tgt_map_3x.
 
